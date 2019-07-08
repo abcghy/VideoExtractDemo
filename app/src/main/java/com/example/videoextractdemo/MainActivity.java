@@ -13,7 +13,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class MainActivity extends AppCompatActivity implements TextureView.SurfaceTextureListener {
+public class MainActivity extends AppCompatActivity implements TextureView.SurfaceTextureListener,
+        SurfaceTexture.OnFrameAvailableListener {
 
     private File cacheFile;
     private VideoDecoder videoDecoder;
@@ -66,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             Log.d(TAG, "run: setpath");
             videoDecoder.setPath(cacheFile);
             try {
-                videoDecoder.prepare();
+                videoDecoder.prepare(width, height);
                 videoDecoder.start();
                 Log.d(TAG, "run: start");
             } catch (IOException e) {
@@ -75,10 +76,15 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         }
     }
 
+    private int width, height;
+
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
 //        VideoDecoder videoDecoder = new VideoDecoder(new Surface(surface));
-        videoDecoder = new VideoDecoder(new Surface(surface));
+        this.width = width;
+        this.height = height;
+        videoDecoder = new VideoDecoder(surface);
+//        surface.setOnFrameAvailableListener(this);
         if (cacheFile.exists()) {
             start();
         }
@@ -86,7 +92,8 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-
+        this.width = width;
+        this.height = height;
     }
 
     @Override
@@ -97,5 +104,11 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
+    }
+
+    @Override
+    public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+        Log.e(TAG, "onFrameAvailable: , currenThread: " + Thread.currentThread().getName());
+//        surfaceTexture.updateTexImage();
     }
 }

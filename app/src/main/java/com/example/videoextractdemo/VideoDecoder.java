@@ -34,12 +34,16 @@ public class VideoDecoder implements Handler.Callback, SurfaceTexture.OnFrameAva
     private int width;
     private int height;
 
+    private VideoRenderer videoRenderer;
+
     public VideoDecoder(SurfaceTexture surfaceTexture) {
 //        mediaCodec = MediaCodec.createDecoderByType("");
         this.mSurfaceTexture = surfaceTexture;
         handlerThread = new HandlerThread("video decoder");
         handlerThread.start();
         handler = new Handler(handlerThread.getLooper(), this);
+
+        videoRenderer = new VideoRenderer(surfaceTexture);
     }
 
     public void setPath(File videoFile) {
@@ -52,8 +56,8 @@ public class VideoDecoder implements Handler.Callback, SurfaceTexture.OnFrameAva
         handler.sendEmptyMessage(INTERNAL_PREPARE);
         return true;
     }
-    OffscreenEGLConnection offscreenEGLConnection;
-    GifTexImage2DProgram   gifTexImage2DProgram;
+//    OffscreenEGLConnection offscreenEGLConnection;
+//    GifTexImage2DProgram   gifTexImage2DProgram;
 
     @WorkerThread
     private void _prepare() throws IOException {
@@ -63,17 +67,22 @@ public class VideoDecoder implements Handler.Callback, SurfaceTexture.OnFrameAva
         mediaCodec.configure(mediaFormat, new Surface(mSurfaceTexture), null, 0);
         mediaCodec.start();
 
-        offscreenEGLConnection = new OffscreenEGLConnection();
-        gifTexImage2DProgram = new GifTexImage2DProgram();
+        videoRenderer.initialize();
 
-        offscreenEGLConnection.initialize(mSurfaceTexture);
-        gifTexImage2DProgram.initialize();
-        gifTexImage2DProgram.setDimensions(width, height);
+//        offscreenEGLConnection = new OffscreenEGLConnection();
+//        gifTexImage2DProgram = new GifTexImage2DProgram();
+//
+//        offscreenEGLConnection.initialize(mSurfaceTexture);
+//        gifTexImage2DProgram.initialize();
+//        gifTexImage2DProgram.setDimensions(width, height);
+//        gifTexImage2DProgram.onRecordChanged();
 //
         mSurfaceTexture.setOnFrameAvailableListener(this);
     }
 
     public void start() {
+        sawInputEOS = false;
+        sawOutputEOS = false;
         handler.sendEmptyMessage(START_DECODE);
     }
 
@@ -131,8 +140,6 @@ public class VideoDecoder implements Handler.Callback, SurfaceTexture.OnFrameAva
 
     @WorkerThread
     private void _startDecode() {
-        sawInputEOS = false;
-        sawOutputEOS = false;
         doDecodeWork();
     }
 
@@ -187,7 +194,7 @@ public class VideoDecoder implements Handler.Callback, SurfaceTexture.OnFrameAva
             }
         }
         if (!sawInputEOS || !sawOutputEOS) {
-            doDecodeWork();
+            handler.sendEmptyMessage(START_DECODE);
         } else {
             // end
             // TODO: 2019-07-01 ghy
@@ -211,8 +218,9 @@ public class VideoDecoder implements Handler.Callback, SurfaceTexture.OnFrameAva
             }
             case UPDATE: {
                 Log.e("TESTTT", "onFrameAvailable: thread: " + Thread.currentThread().getName());
-                gifTexImage2DProgram.draw();
-                offscreenEGLConnection.draw();
+//                gifTexImage2DProgram.draw();
+//                offscreenEGLConnection.draw();
+                videoRenderer.draw();
                 mSurfaceTexture.updateTexImage();
                 break;
             }
